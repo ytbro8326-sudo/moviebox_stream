@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse
 app = FastAPI(
     title="MovieBox Stream",
     description="Full Streaming Web Application & Pure REST API for MovieBox",
-    version="3.0.0"
+    version="3.1.0"
 )
 
 app.add_middleware(
@@ -154,13 +154,11 @@ async def home_web_app():
             background-attachment: fixed;
         }
 
-        /* Scrollbar */
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: var(--bg-body); }
         ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
-        /* Navbar */
         nav {
             position: fixed;
             top: 0; left: 0; right: 0;
@@ -226,7 +224,6 @@ async def home_web_app():
             color: #fff;
         }
 
-        /* Search Box */
         .search-container {
             position: relative;
             width: 320px;
@@ -291,7 +288,6 @@ async def home_web_app():
         .suggestion-item i { color: var(--primary); font-size: 0.9rem; }
         .suggestion-title { font-weight: 500; font-size: 0.9rem; }
 
-        /* Main Layout */
         main {
             padding-top: 90px;
             max-width: 1440px;
@@ -299,7 +295,6 @@ async def home_web_app():
             padding-bottom: 80px;
         }
 
-        /* Hero Banner */
         .hero {
             position: relative;
             margin: 24px 48px 48px;
@@ -410,7 +405,6 @@ async def home_web_app():
             transform: translateY(-2px);
         }
 
-        /* Content Section */
         .section {
             padding: 0 48px;
             margin-bottom: 56px;
@@ -435,7 +429,6 @@ async def home_web_app():
             color: var(--primary);
         }
 
-        /* Movie Grid */
         .grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
@@ -551,7 +544,6 @@ async def home_web_app():
             justify-content: space-between;
         }
 
-        /* Spinner & Loading */
         .loading-spinner {
             display: flex;
             flex-direction: column;
@@ -572,7 +564,6 @@ async def home_web_app():
 
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* Modal Base */
         .modal-backdrop {
             position: fixed;
             inset: 0;
@@ -622,7 +613,6 @@ async def home_web_app():
             transform: rotate(90deg);
         }
 
-        /* Detail Modal Specs */
         .detail-hero {
             display: flex;
             gap: 32px;
@@ -681,6 +671,7 @@ async def home_web_app():
             align-items: center;
             gap: 16px;
             margin-top: 12px;
+            flex-wrap: wrap;
         }
 
         .select-input {
@@ -695,11 +686,15 @@ async def home_web_app():
             cursor: pointer;
         }
 
-        /* Player Modal */
+        .select-input option {
+            background: #12141d;
+            color: #fff;
+        }
+
         .player-wrapper {
             position: relative;
             width: 100%;
-            padding-top: 56.25%; /* 16:9 ratio */
+            padding-top: 56.25%;
             background: #000;
             border-radius: var(--radius-lg) var(--radius-lg) 0 0;
             overflow: hidden;
@@ -725,6 +720,7 @@ async def home_web_app():
             display: flex;
             align-items: center;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
         .quality-btn {
@@ -745,7 +741,6 @@ async def home_web_app():
             border-color: var(--primary);
         }
 
-        /* Responsive Design */
         @media (max-width: 900px) {
             nav { padding: 16px 24px; }
             .search-container { width: 220px; }
@@ -766,7 +761,6 @@ async def home_web_app():
 </head>
 <body>
 
-    <!-- Navigation Bar -->
     <nav>
         <a href="#" class="logo" onclick="loadPage('home'); return false;">
             <div class="logo-icon"><i class="fa-solid fa-play"></i></div>
@@ -787,16 +781,13 @@ async def home_web_app():
         </div>
     </nav>
 
-    <!-- Main Container -->
     <main id="main-content">
-        <!-- Dynamic Content Injected Here -->
         <div class="loading-spinner">
             <div class="spinner"></div>
-            <p>Initializing MovieBox API...</p>
+            <p>Initializing MovieBox Stream...</p>
         </div>
     </main>
 
-    <!-- Detail Modal -->
     <div class="modal-backdrop" id="detail-modal">
         <div class="modal-content">
             <button class="modal-close" onclick="closeModal('detail-modal')"><i class="fa-solid fa-xmark"></i></button>
@@ -812,12 +803,8 @@ async def home_web_app():
                     <p class="detail-overview" id="modal-desc">Loading details...</p>
                     
                     <div class="episodes-selector" id="tv-controls" style="display: none;">
-                        <select class="select-input" id="season-select">
-                            <option value="1">Season 1</option>
-                        </select>
-                        <select class="select-input" id="episode-select">
-                            <option value="1">Episode 1</option>
-                        </select>
+                        <select class="select-input" id="season-select" onchange="onSeasonChange()"></select>
+                        <select class="select-input" id="episode-select"></select>
                     </div>
 
                     <div style="margin-top: 16px;">
@@ -828,21 +815,18 @@ async def home_web_app():
         </div>
     </div>
 
-    <!-- Video Player Modal -->
     <div class="modal-backdrop" id="player-modal">
         <div class="modal-content" style="max-width: 1000px; padding: 0; background: #000;">
             <button class="modal-close" onclick="closePlayerModal()"><i class="fa-solid fa-xmark"></i></button>
             <div class="player-wrapper">
-                <video id="html5-player" class="player-video" controls autoplay crossorigin="anonymous"></video>
+                <video id="html5-player" class="player-video" controls autoplay></video>
             </div>
             <div class="player-controls-bar">
                 <div>
                     <h3 id="player-title" style="font-size: 1.1rem; font-weight: 700;">Movie Title</h3>
-                    <p id="player-sub" style="font-size: 0.85rem; color: var(--text-sub);">Quality Stream</p>
+                    <p id="player-sub" style="font-size: 0.85rem; color: var(--text-sub);">Direct High-Speed MP4 CDN Stream</p>
                 </div>
-                <div class="quality-selector" id="quality-buttons">
-                    <!-- Dynamic Quality Buttons -->
-                </div>
+                <div class="quality-selector" id="quality-buttons"></div>
             </div>
         </div>
     </div>
@@ -851,13 +835,12 @@ async def home_web_app():
         let currentSubjectId = null;
         let currentSlug = "";
         let currentStreams = [];
+        let currentSeasonsData = [];
 
-        // App Init
         document.addEventListener("DOMContentLoaded", () => {
             loadPage('home');
         });
 
-        // Load Homepage
         async function loadPage(pageType) {
             setActiveNav('btn-' + (pageType === 'home' ? 'home' : pageType));
             const main = document.getElementById('main-content');
@@ -877,8 +860,6 @@ async def home_web_app():
                 }
 
                 let html = '';
-                
-                // Hero Banner (First Banner Item)
                 const bannerSec = data.sections.find(s => s.section === 'Banner');
                 if (bannerSec && bannerSec.items.length > 0) {
                     const heroItem = bannerSec.items[0];
@@ -896,7 +877,6 @@ async def home_web_app():
                     </div>`;
                 }
 
-                // Render Content Sections
                 data.sections.forEach(sec => {
                     if (sec.items && sec.items.length > 0) {
                         html += `
@@ -917,7 +897,6 @@ async def home_web_app():
             }
         }
 
-        // Load Categories (Movies, TV, Anime)
         async function loadCategory(catEndpoint) {
             setActiveNav('btn-' + catEndpoint);
             const main = document.getElementById('main-content');
@@ -953,7 +932,6 @@ async def home_web_app():
             }
         }
 
-        // Render Card Component
         function renderCard(item) {
             const poster = item.poster_url || 'https://via.placeholder.com/300x450?text=No+Poster';
             const rating = item.rating ? `<div class="card-rating"><i class="fa-solid fa-star"></i> ${item.rating}</div>` : '';
@@ -978,7 +956,6 @@ async def home_web_app():
             </div>`;
         }
 
-        // Live Search Handling
         let searchTimeout = null;
         function handleSearchInput(e) {
             const query = e.target.value.trim();
@@ -1016,7 +993,6 @@ async def home_web_app():
             }, 300);
         }
 
-        // Search Full Grid
         async function executeSearch(query) {
             const main = document.getElementById('main-content');
             main.innerHTML = `
@@ -1045,23 +1021,26 @@ async def home_web_app():
             }
         }
 
-        // Open Detail Modal
         async function openMediaDetail(subjectId, slug) {
             currentSubjectId = subjectId;
             currentSlug = slug;
+            currentSeasonsData = [];
 
             const modal = document.getElementById('detail-modal');
             modal.style.display = 'flex';
 
-            document.getElementById('modal-title').innerText = 'Loading Title...';
-            document.getElementById('modal-desc').innerText = 'Fetching specs...';
+            document.getElementById('modal-title').innerText = 'Loading Details...';
+            document.getElementById('modal-desc').innerText = 'Fetching metadata specs...';
             document.getElementById('modal-poster').style.backgroundImage = 'none';
+            document.getElementById('tv-controls').style.display = 'none';
 
             try {
                 const res = await fetch(`/detail/${slug}`);
                 const data = await res.json();
                 const detail = data.data || {};
                 const sub = detail.subject || {};
+                const resource = detail.resource || {};
+                const seasons = resource.seasons || [];
 
                 document.getElementById('modal-title').innerText = sub.title || 'Movie / Series';
                 document.getElementById('modal-desc').innerText = sub.description || sub.introduction || 'No synopsis available.';
@@ -1070,14 +1049,27 @@ async def home_web_app():
                 document.getElementById('modal-year').innerText = (sub.releaseDate || '').substring(0, 4) || '2024';
                 document.getElementById('modal-badge').innerText = sub.corner || 'HD';
 
-                // Play Button Handler
+                // Setup TV Seasons/Episodes Dropdown
+                if (seasons && seasons.length > 0) {
+                    currentSeasonsData = seasons;
+                    const seasonSelect = document.getElementById('season-select');
+                    seasonSelect.innerHTML = seasons.map(s => `<option value="${s.se}">Season ${s.se}</option>`).join('');
+                    document.getElementById('tv-controls').style.display = 'flex';
+                    onSeasonChange();
+                }
+
                 document.getElementById('modal-play-btn').onclick = () => {
+                    let se = 0, ep = 0;
+                    if (currentSeasonsData.length > 0) {
+                        se = parseInt(document.getElementById('season-select').value) || 1;
+                        ep = parseInt(document.getElementById('episode-select').value) || 1;
+                    }
                     closeModal('detail-modal');
-                    launchPlayer(subjectId, slug, 0, 0, sub.title);
+                    launchPlayer(subjectId, slug, se, ep, sub.title);
                 };
 
             } catch (err) {
-                document.getElementById('modal-title').innerText = 'Details Loaded';
+                document.getElementById('modal-title').innerText = 'Details Ready';
                 document.getElementById('modal-play-btn').onclick = () => {
                     closeModal('detail-modal');
                     launchPlayer(subjectId, slug, 0, 0, 'Stream Video');
@@ -1085,15 +1077,29 @@ async def home_web_app():
             }
         }
 
-        // Launch Video Player
+        function onSeasonChange() {
+            const seasonVal = parseInt(document.getElementById('season-select').value) || 1;
+            const seasonObj = currentSeasonsData.find(s => s.se === seasonVal) || currentSeasonsData[0] || { maxEp: 1 };
+            const maxEp = seasonObj.maxEp || seasonObj.episodes || 1;
+            const epSelect = document.getElementById('episode-select');
+            
+            let options = '';
+            for (let i = 1; i <= maxEp; i++) {
+                options += `<option value="${i}">Episode ${i}</option>`;
+            }
+            epSelect.innerHTML = options;
+        }
+
         async function launchPlayer(subjectId, slug, se=0, ep=0, title='Stream') {
             const playerModal = document.getElementById('player-modal');
             const video = document.getElementById('html5-player');
             const playerTitle = document.getElementById('player-title');
+            const playerSub = document.getElementById('player-sub');
             const qualityBox = document.getElementById('quality-buttons');
 
             playerTitle.innerText = title;
-            qualityBox.innerHTML = '<span>Fetching sources...</span>';
+            playerSub.innerText = (se > 0 && ep > 0) ? `Season ${se} • Episode ${ep}` : 'Direct High-Speed MP4 CDN Stream';
+            qualityBox.innerHTML = '<span><i class="fa-solid fa-spinner fa-spin"></i> Fetching stream sources...</span>';
             video.src = '';
             playerModal.style.display = 'flex';
 
@@ -1104,22 +1110,19 @@ async def home_web_app():
                 if (data.sources && data.sources.length > 0) {
                     currentStreams = data.sources;
                     
-                    // Render Quality Buttons
                     qualityBox.innerHTML = data.sources.map((s, idx) => `
                         <button class="quality-btn ${idx === 0 ? 'active' : ''}" onclick="switchQuality(${idx})">${s.resolution} (${s.format})</button>
                     `).join('');
 
-                    // Play Highest Quality Source
                     switchQuality(0);
                 } else {
-                    qualityBox.innerHTML = '<span style="color: var(--primary)">No direct MP4 stream found for this episode.</span>';
+                    qualityBox.innerHTML = '<span style="color: var(--primary)"><i class="fa-solid fa-triangle-exclamation"></i> No direct MP4 stream found for this episode.</span>';
                 }
             } catch (err) {
                 qualityBox.innerHTML = `<span style="color: var(--primary)">Stream error: ${err.message}</span>`;
             }
         }
 
-        // Switch Resolution Quality
         function switchQuality(idx) {
             if (!currentStreams[idx]) return;
             const video = document.getElementById('html5-player');
@@ -1133,7 +1136,6 @@ async def home_web_app():
             video.play();
         }
 
-        // Close Modal Helper
         function closeModal(id) {
             document.getElementById(id).style.display = 'none';
         }
@@ -1145,7 +1147,6 @@ async def home_web_app():
             closeModal('player-modal');
         }
 
-        // Nav Helper
         function setActiveNav(btnId) {
             document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
             const el = document.getElementById(btnId);
@@ -1255,32 +1256,42 @@ async def get_movie_detail(slug: str):
 
 @app.get("/api/stream/{subject_id}")
 async def get_stream_sources(subject_id: str, detail_path: str = "", se: int = 0, ep: int = 0):
-    play_url = f"{STREAM_BASE}/web/subject/play?subjectId={subject_id}&se={se}&ep={ep}&detailPath={detail_path}"
-    player_referer = f"https://h5.aoneroom.com/spa/videoPlayPage/movies/{detail_path}?id={subject_id}&type=/movie/detail&detailSe={se}&detailEp={ep}&lang=en"
+    async def fetch_play(s: int, e: int):
+        play_url = f"{STREAM_BASE}/web/subject/play?subjectId={subject_id}&se={s}&ep={e}&detailPath={detail_path}"
+        player_referer = f"https://h5.aoneroom.com/spa/videoPlayPage/movies/{detail_path}?id={subject_id}&type=/movie/detail&detailSe={s}&detailEp={e}&lang=en"
+        async with httpx.AsyncClient(follow_redirects=True, timeout=25) as client:
+            try:
+                resp = await client.get(play_url, headers={**PLAYER_HEADERS, "Referer": player_referer})
+                if resp.status_code == 200:
+                    res_json = resp.json()
+                    return res_json.get("data", {}) or {}
+            except Exception:
+                pass
+        return {}
 
-    async with httpx.AsyncClient(follow_redirects=True, timeout=25) as client:
-        try:
-            resp = await client.get(play_url, headers={**PLAYER_HEADERS, "Referer": player_referer})
-            if resp.status_code != 200:
-                raise HTTPException(status_code=502, detail="Stream service unavailable")
-            res_json = resp.json()
-            data = res_json.get("data", {}) or {}
-        except Exception as e:
-            if isinstance(e, HTTPException): raise e
-            raise HTTPException(status_code=502, detail=f"Stream request failed: {str(e)}")
-
+    data = await fetch_play(se, ep)
     has_resource = data.get("hasResource", False)
-    
+    raw_streams = data.get("streams", []) or []
+
+    # Smart Fallback: If se=0 and ep=0 produced no streams, try se=1 and ep=1 automatically
+    if not raw_streams and se == 0 and ep == 0:
+        fallback_data = await fetch_play(1, 1)
+        if fallback_data.get("streams"):
+            data = fallback_data
+            se, ep = 1, 1
+            has_resource = data.get("hasResource", False)
+            raw_streams = data.get("streams", []) or []
+
     streams = [
         {
-            "resolution": f"{s.get('resolutions')}p" if s.get('resolutions') else "HD",
-            "format": s.get("format", "mp4"),
+            "resolution": f"{s.get('resolutions')}p" if s.get('resolutions') and str(s.get('resolutions')) != "0" else "HD",
+            "format": s.get("format", "MP4"),
             "url": s.get("url"),
             "size": s.get("size"),
             "duration": s.get("duration"),
             "codec": s.get("codecName")
         }
-        for s in data.get("streams", []) or [] if s.get("url")
+        for s in raw_streams if s.get("url")
     ]
     
     return {
@@ -1334,7 +1345,7 @@ async def get_captions(subject_id: str, detail_path: str = "", se: int = 0, ep: 
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "service": "MovieBox API Pro", "version": "3.0.0"}
+    return {"status": "ok", "service": "MovieBox Stream", "version": "3.1.0"}
 
 if __name__ == "__main__":
     import os, uvicorn

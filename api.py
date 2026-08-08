@@ -9,7 +9,7 @@ from fastapi.responses import HTMLResponse
 app = FastAPI(
     title="MovieBox Stream",
     description="Full Streaming Web Application & Pure REST API for MovieBox",
-    version="3.0.0"
+    version="3.1.0"
 )
 
 app.add_middleware(
@@ -671,6 +671,7 @@ async def home_web_app():
             align-items: center;
             gap: 16px;
             margin-top: 12px;
+            flex-wrap: wrap;
         }
 
         .select-input {
@@ -683,6 +684,11 @@ async def home_web_app():
             font-size: 0.9rem;
             outline: none;
             cursor: pointer;
+        }
+
+        .select-input option {
+            background: #12141d;
+            color: #fff;
         }
 
         .player-wrapper {
@@ -714,6 +720,7 @@ async def home_web_app():
             display: flex;
             align-items: center;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
         .quality-btn {
@@ -777,7 +784,7 @@ async def home_web_app():
     <main id="main-content">
         <div class="loading-spinner">
             <div class="spinner"></div>
-            <p>Initializing MovieBox API...</p>
+            <p>Initializing MovieBox Stream...</p>
         </div>
     </main>
 
@@ -796,12 +803,8 @@ async def home_web_app():
                     <p class="detail-overview" id="modal-desc">Loading details...</p>
                     
                     <div class="episodes-selector" id="tv-controls" style="display: none;">
-                        <select class="select-input" id="season-select">
-                            <option value="1">Season 1</option>
-                        </select>
-                        <select class="select-input" id="episode-select">
-                            <option value="1">Episode 1</option>
-                        </select>
+                        <select class="select-input" id="season-select" onchange="onSeasonChange()"></select>
+                        <select class="select-input" id="episode-select"></select>
                     </div>
 
                     <div style="margin-top: 16px;">
@@ -816,12 +819,12 @@ async def home_web_app():
         <div class="modal-content" style="max-width: 1000px; padding: 0; background: #000;">
             <button class="modal-close" onclick="closePlayerModal()"><i class="fa-solid fa-xmark"></i></button>
             <div class="player-wrapper">
-                <video id="html5-player" class="player-video" controls autoplay crossorigin="anonymous"></video>
+                <video id="html5-player" class="player-video" controls autoplay></video>
             </div>
             <div class="player-controls-bar">
                 <div>
                     <h3 id="player-title" style="font-size: 1.1rem; font-weight: 700;">Movie Title</h3>
-                    <p id="player-sub" style="font-size: 0.85rem; color: var(--text-sub);">Quality Stream</p>
+                    <p id="player-sub" style="font-size: 0.85rem; color: var(--text-sub);">Direct High-Speed MP4 CDN Stream</p>
                 </div>
                 <div class="quality-selector" id="quality-buttons"></div>
             </div>
@@ -832,6 +835,7 @@ async def home_web_app():
         let currentSubjectId = null;
         let currentSlug = "";
         let currentStreams = [];
+        let currentSeasonsData = [];
 
         document.addEventListener("DOMContentLoaded", () => {
             loadPage('home');
@@ -1020,19 +1024,23 @@ async def home_web_app():
         async function openMediaDetail(subjectId, slug) {
             currentSubjectId = subjectId;
             currentSlug = slug;
+            currentSeasonsData = [];
 
             const modal = document.getElementById('detail-modal');
             modal.style.display = 'flex';
 
-            document.getElementById('modal-title').innerText = 'Loading Title...';
-            document.getElementById('modal-desc').innerText = 'Fetching specs...';
+            document.getElementById('modal-title').innerText = 'Loading Details...';
+            document.getElementById('modal-desc').innerText = 'Fetching metadata specs...';
             document.getElementById('modal-poster').style.backgroundImage = 'none';
+            document.getElementById('tv-controls').style.display = 'none';
 
             try {
                 const res = await fetch(`/detail/${slug}`);
                 const data = await res.json();
                 const detail = data.data || {};
                 const sub = detail.subject || {};
+                const resource = detail.resource || {};
+                const seasons = resource.seasons || [];
 
                 document.getElementById('modal-title').innerText = sub.title || 'Movie / Series';
                 document.getElementById('modal-desc').innerText = sub.description || sub.introduction || 'No synopsis available.';
@@ -1041,13 +1049,26 @@ async def home_web_app():
                 document.getElementById('modal-year').innerText = (sub.releaseDate || '').substring(0, 4) || '2024';
                 document.getElementById('modal-badge').innerText = sub.corner || 'HD';
 
+                if (seasons && seasons.length > 0) {
+                    currentSeasonsData = seasons;
+                    const seasonSelect = document.getElementById('season-select');
+                    seasonSelect.innerHTML = seasons.map(s => `<option value="${s.se}">Season ${s.se}</option>`).join('');
+                    document.getElementById('tv-controls').style.display = 'flex';
+                    onSeasonChange();
+                }
+
                 document.getElementById('modal-play-btn').onclick = () => {
+                    let se = 0, ep = 0;
+                    if (currentSeasonsData.length > 0) {
+                        se = parseInt(document.getElementById('season-select').value) || 1;
+                        ep = parseInt(document.getElementById('episode-select').value) || 1;
+                    }
                     closeModal('detail-modal');
-                    launchPlayer(subjectId, slug, 0, 0, sub.title);
+                    launchPlayer(subjectId, slug, se, ep, sub.title);
                 };
 
             } catch (err) {
-                document.getElementById('modal-title').innerText = 'Details Loaded';
+                document.getElementById('modal-title').innerText = 'Details Ready';
                 document.getElementById('modal-play-btn').onclick = () => {
                     closeModal('detail-modal');
                     launchPlayer(subjectId, slug, 0, 0, 'Stream Video');
@@ -1055,14 +1076,29 @@ async def home_web_app():
             }
         }
 
+        function onSeasonChange() {
+            const seasonVal = parseInt(document.getElementById('season-select').value) || 1;
+            const seasonObj = currentSeasonsData.find(s => s.se === seasonVal) || currentSeasonsData[0] || { maxEp: 1 };
+            const maxEp = seasonObj.maxEp || seasonObj.episodes || 1;
+            const epSelect = document.getElementById('episode-select');
+            
+            let options = '';
+            for (let i = 1; i <= maxEp; i++) {
+                options += `<option value="${i}">Episode ${i}</option>`;
+            }
+            epSelect.innerHTML = options;
+        }
+
         async function launchPlayer(subjectId, slug, se=0, ep=0, title='Stream') {
             const playerModal = document.getElementById('player-modal');
             const video = document.getElementById('html5-player');
             const playerTitle = document.getElementById('player-title');
+            const playerSub = document.getElementById('player-sub');
             const qualityBox = document.getElementById('quality-buttons');
 
             playerTitle.innerText = title;
-            qualityBox.innerHTML = '<span>Fetching sources...</span>';
+            playerSub.innerText = (se > 0 && ep > 0) ? `Season ${se} • Episode ${ep}` : 'Direct High-Speed MP4 CDN Stream';
+            qualityBox.innerHTML = '<span><i class="fa-solid fa-spinner fa-spin"></i> Fetching stream sources...</span>';
             video.src = '';
             playerModal.style.display = 'flex';
 
@@ -1079,7 +1115,7 @@ async def home_web_app():
 
                     switchQuality(0);
                 } else {
-                    qualityBox.innerHTML = '<span style="color: var(--primary)">No direct MP4 stream found for this episode.</span>';
+                    qualityBox.innerHTML = '<span style="color: var(--primary)"><i class="fa-solid fa-triangle-exclamation"></i> No direct MP4 stream found for this episode.</span>';
                 }
             } catch (err) {
                 qualityBox.innerHTML = `<span style="color: var(--primary)">Stream error: ${err.message}</span>`;
@@ -1219,32 +1255,42 @@ async def get_movie_detail(slug: str):
 
 @app.get("/api/stream/{subject_id}")
 async def get_stream_sources(subject_id: str, detail_path: str = "", se: int = 0, ep: int = 0):
-    play_url = f"{STREAM_BASE}/web/subject/play?subjectId={subject_id}&se={se}&ep={ep}&detailPath={detail_path}"
-    player_referer = f"https://h5.aoneroom.com/spa/videoPlayPage/movies/{detail_path}?id={subject_id}&type=/movie/detail&detailSe={se}&detailEp={ep}&lang=en"
+    async def fetch_play(s: int, e: int):
+        play_url = f"{STREAM_BASE}/web/subject/play?subjectId={subject_id}&se={s}&ep={e}&detailPath={detail_path}"
+        player_referer = f"https://h5.aoneroom.com/spa/videoPlayPage/movies/{detail_path}?id={subject_id}&type=/movie/detail&detailSe={s}&detailEp={e}&lang=en"
+        async with httpx.AsyncClient(follow_redirects=True, timeout=25) as client:
+            try:
+                resp = await client.get(play_url, headers={**PLAYER_HEADERS, "Referer": player_referer})
+                if resp.status_code == 200:
+                    res_json = resp.json()
+                    return res_json.get("data", {}) or {}
+            except Exception:
+                pass
+        return {}
 
-    async with httpx.AsyncClient(follow_redirects=True, timeout=25) as client:
-        try:
-            resp = await client.get(play_url, headers={**PLAYER_HEADERS, "Referer": player_referer})
-            if resp.status_code != 200:
-                raise HTTPException(status_code=502, detail="Stream service unavailable")
-            res_json = resp.json()
-            data = res_json.get("data", {}) or {}
-        except Exception as e:
-            if isinstance(e, HTTPException): raise e
-            raise HTTPException(status_code=502, detail=f"Stream request failed: {str(e)}")
-
+    data = await fetch_play(se, ep)
     has_resource = data.get("hasResource", False)
-    
+    raw_streams = data.get("streams", []) or []
+
+    # Smart Fallback: If se=0 and ep=0 produced no streams, try se=1 and ep=1 automatically
+    if not raw_streams and se == 0 and ep == 0:
+        fallback_data = await fetch_play(1, 1)
+        if fallback_data.get("streams"):
+            data = fallback_data
+            se, ep = 1, 1
+            has_resource = data.get("hasResource", False)
+            raw_streams = data.get("streams", []) or []
+
     streams = [
         {
-            "resolution": f"{s.get('resolutions')}p" if s.get('resolutions') else "HD",
-            "format": s.get("format", "mp4"),
+            "resolution": f"{s.get('resolutions')}p" if s.get('resolutions') and str(s.get('resolutions')) != "0" else "HD",
+            "format": s.get("format", "MP4"),
             "url": s.get("url"),
             "size": s.get("size"),
             "duration": s.get("duration"),
             "codec": s.get("codecName")
         }
-        for s in data.get("streams", []) or [] if s.get("url")
+        for s in raw_streams if s.get("url")
     ]
     
     return {
@@ -1298,7 +1344,7 @@ async def get_captions(subject_id: str, detail_path: str = "", se: int = 0, ep: 
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "service": "MovieBox Stream", "version": "3.0.0"}
+    return {"status": "ok", "service": "MovieBox Stream", "version": "3.1.0"}
 
 if __name__ == "__main__":
     import os, uvicorn
