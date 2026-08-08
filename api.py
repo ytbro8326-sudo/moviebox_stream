@@ -8,8 +8,8 @@ from fastapi.responses import HTMLResponse
 
 app = FastAPI(
     title="MovieBox API Pro",
-    description="Full Pure REST API for moviebox.ph — Fixed Streaming Endpoint",
-    version="2.2.0"
+    description="Full Pure REST API for moviebox.ph — Production Ready for Render",
+    version="2.2.1"
 )
 
 app.add_middleware(
@@ -21,8 +21,6 @@ app.add_middleware(
 
 BASE_URL = "https://moviebox.ph"
 API_BASE = "https://h5-api.aoneroom.com/wefeed-h5api-bff"
-
-# আপডেট করা সঠিক স্ট্রিমিং বেস ইউআরএল
 STREAM_BASE = "https://h5.aoneroom.com/wefeed-h5-bff"
 
 _bearer_token: str | None = None
@@ -57,20 +55,26 @@ PLAYER_HEADERS = {
 }
 
 async def _get_bearer_token() -> str:
-    """Auto-acquire a guest JWT from the x-user response header."""
+    """Auto-acquire a guest JWT token with fallback parsing."""
     global _bearer_token
     if _bearer_token:
         return _bearer_token
-    async with httpx.AsyncClient(follow_redirects=True, timeout=25) as client:
-        resp = await client.get(f"{API_BASE}/home?host=moviebox.ph", headers=DEFAULT_HEADERS)
-        x_user = resp.headers.get("x-user")
-        if x_user:
-            _bearer_token = json.loads(x_user).get("token")
-        if not _bearer_token:
-            cookie = resp.headers.get("set-cookie", "")
-            m = re.search(r"token=([^;]+)", cookie)
-            if m:
-                _bearer_token = m.group(1)
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=25) as client:
+            resp = await client.get(f"{API_BASE}/home?host=moviebox.ph", headers=DEFAULT_HEADERS)
+            x_user = resp.headers.get("x-user")
+            if x_user:
+                try:
+                    _bearer_token = json.loads(x_user).get("token")
+                except Exception:
+                    pass
+            if not _bearer_token:
+                cookie = resp.headers.get("set-cookie", "")
+                m = re.search(r"token=([^;]+)", cookie)
+                if m:
+                    _bearer_token = m.group(1)
+    except Exception:
+        _bearer_token = None
     return _bearer_token or ""
 
 async def _make_request(url: str, method: str = "GET", payload: dict = None, custom_headers: dict = None) -> dict:
@@ -90,15 +94,20 @@ async def _make_request(url: str, method: str = "GET", payload: dict = None, cus
 
             x_user = resp.headers.get("x-user")
             if x_user:
-                new_token = json.loads(x_user).get("token")
-                if new_token:
-                    _bearer_token = new_token
+                try:
+                    new_token = json.loads(x_user).get("token")
+                    if new_token:
+                        _bearer_token = new_token
+                except Exception:
+                    pass
 
             if resp.status_code != 200:
+                _bearer_token = None
                 raise HTTPException(status_code=502, detail=f"Upstream API error: {resp.status_code}")
 
             return resp.json()
         except Exception as e:
+            _bearer_token = None
             if isinstance(e, HTTPException): raise e
             raise HTTPException(status_code=502, detail=f"Request failed: {str(e)}")
 
@@ -243,7 +252,7 @@ async def dashboard():
     <body>
         <div class="container">
             <header>
-                <div class="badge">Enterprise API Solution v2.2.0</div>
+                <div class="badge">Enterprise API Solution v2.2.1</div>
                 <h1>MovieBox Pro</h1>
                 <p style="color: #667; font-size: 1.25rem; font-weight: 300;">Direct Stream Extraction API</p>
             </header>
@@ -313,7 +322,7 @@ async def _get_category_data(tab_id: int, page: int = 1, per_page: int = 24, sor
     url = f"{API_BASE}/subject/filter"
     payload = {"tabId": tab_id, "filter": {"sort": sort, "genre": "ALL", "country": "ALL", "year": "ALL", "language": "ALL"}, "page": page, "perPage": per_page}
     data = await _make_request(url, method="POST", payload=payload)
-    inner = data.get("data", {})
+    inner = data.get("data", {}) or {}
     raw_items = inner.get("items", inner.get("subjects", []))
     items = [{
         "name": sub.get("title"),
@@ -324,7 +333,7 @@ async def _get_category_data(tab_id: int, page: int = 1, per_page: int = 24, sor
         "rating": sub.get("imdbRatingValue"),
         "year": sub.get("releaseDate", "")[:4] if sub.get("releaseDate") else None
     } for sub in raw_items]
-    pager = inner.get("pager", {})
+    pager = inner.get("pager", {}) or {}
     total = pager.get("totalCount") or inner.get("total") or len(items)
     return {"page": page, "per_page": per_page, "total": total, "items": items}
 
@@ -344,7 +353,7 @@ async def get_animation(page: int = 1, sort: str = "RECOMMEND"):
 async def get_search_suggestions(q: str = Query(..., min_length=1)):
     url = f"{API_BASE}/subject/search-suggest"
     data = await _make_request(url, method="POST", payload={"keyword": q, "perPage": 10})
-    inner = data.get("data", {})
+    inner = data.get("data", {}) or {}
     raw = inner.get("items", inner.get("list", []))
     suggestions = []
     for item in raw:
@@ -360,7 +369,7 @@ async def get_search_suggestions(q: str = Query(..., min_length=1)):
 async def search(q: str = Query(..., min_length=1), page: int = 1):
     url = f"{API_BASE}/subject/search"
     data = await _make_request(url, method="POST", payload={"keyword": q, "page": page, "perPage": 20})
-    inner = data.get("data", {})
+    inner = data.get("data", {}) or {}
     raw = inner.get("items", inner.get("list", []))
     items = [{
         "name": sub.get("title"),
@@ -368,7 +377,7 @@ async def search(q: str = Query(..., min_length=1), page: int = 1):
         "slug": sub.get("detailPath"),
         "subject_id": sub.get("subjectId")
     } for sub in raw]
-    pager = inner.get("pager", {})
+    pager = inner.get("pager", {}) or {}
     total = pager.get("totalCount") or inner.get("total") or len(items)
     return {"query": q, "page": page, "total": total, "items": items}
 
@@ -377,24 +386,21 @@ async def get_movie_detail(slug: str):
     url = f"{API_BASE}/detail?detailPath={slug}"
     return await _make_request(url)
 
-# ----------------------------------------------------
-# 📌 ফিক্স করা স্ট্রিমিং এন্ডপয়েন্ট (Aoneroom Direct MP4 Stream)
-# ----------------------------------------------------
 @app.get("/api/stream/{subject_id}")
 async def get_stream_sources(subject_id: str, detail_path: str = "", se: int = 0, ep: int = 0):
-    # আপনার রিকমেন্ড করা ওয়ার্কিং পাথ
     play_url = f"{STREAM_BASE}/web/subject/play?subjectId={subject_id}&se={se}&ep={ep}&detailPath={detail_path}"
-    
     player_referer = f"https://h5.aoneroom.com/spa/videoPlayPage/movies/{detail_path}?id={subject_id}&type=/movie/detail&detailSe={se}&detailEp={ep}&lang=en"
 
     async with httpx.AsyncClient(follow_redirects=True, timeout=25) as client:
-        resp = await client.get(play_url, headers={**PLAYER_HEADERS, "Referer": player_referer})
-        
-        if resp.status_code != 200:
-            raise HTTPException(status_code=502, detail="Stream service unavailable")
-            
-        res_json = resp.json()
-        data = res_json.get("data", {})
+        try:
+            resp = await client.get(play_url, headers={**PLAYER_HEADERS, "Referer": player_referer})
+            if resp.status_code != 200:
+                raise HTTPException(status_code=502, detail="Stream service unavailable")
+            res_json = resp.json()
+            data = res_json.get("data", {}) or {}
+        except Exception as e:
+            if isinstance(e, HTTPException): raise e
+            raise HTTPException(status_code=502, detail=f"Stream request failed: {str(e)}")
 
     has_resource = data.get("hasResource", False)
     
@@ -407,7 +413,7 @@ async def get_stream_sources(subject_id: str, detail_path: str = "", se: int = 0
             "duration": s.get("duration"),
             "codec": s.get("codecName")
         }
-        for s in data.get("streams", []) if s.get("url")
+        for s in data.get("streams", []) or [] if s.get("url")
     ]
     
     return {
@@ -429,11 +435,14 @@ async def get_captions(subject_id: str, detail_path: str = "", se: int = 0, ep: 
     player_referer = f"https://h5.aoneroom.com/spa/videoPlayPage/movies/{detail_path}?id={subject_id}&type=/movie/detail&detailSe={se}&detailEp={ep}&lang=en"
 
     async with httpx.AsyncClient(follow_redirects=True, timeout=25) as client:
-        play_resp = await client.get(play_url, headers={**PLAYER_HEADERS, "Referer": player_referer})
-        play_data = play_resp.json().get("data", {})
+        try:
+            play_resp = await client.get(play_url, headers={**PLAYER_HEADERS, "Referer": player_referer})
+            play_data = play_resp.json().get("data", {}) or {}
+        except Exception:
+            play_data = {}
 
-    streams = play_data.get("streams", [])
-    dash = play_data.get("dash", [])
+    streams = play_data.get("streams", []) or []
+    dash = play_data.get("dash", []) or []
 
     stream_id = None
     stream_format = None
@@ -452,13 +461,13 @@ async def get_captions(subject_id: str, detail_path: str = "", se: int = 0, ep: 
         f"?format={stream_format}&id={stream_id}&subjectId={subject_id}&detailPath={detail_path}"
     )
     data = await _make_request(cap_url)
-    inner = data.get("data", {})
-    captions = inner.get("captions", []) if isinstance(inner, dict) else inner
+    inner = data.get("data", {}) or {}
+    captions = inner.get("captions", []) if isinstance(inner, dict) else (inner if isinstance(inner, list) else [])
     return {"subject_id": subject_id, "se": se, "ep": ep, "count": len(captions), "captions": captions}
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "service": "MovieBox API Pro", "version": "2.2.0"}
+    return {"status": "ok", "service": "MovieBox API Pro", "version": "2.2.1"}
 
 if __name__ == "__main__":
     import os, uvicorn
