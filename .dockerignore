@@ -3,6 +3,7 @@
 .env
 token.txt
 github_mgr.py
+Github_push_create_delete.py
 .venv
 venv/
 __pycache__/
