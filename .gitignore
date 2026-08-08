@@ -3,13 +3,14 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# Environments
+# Environments & Local Utilities
 .venv/
 venv/
 ENV/
 env/
 .env
 token.txt
+github_mgr.py
 
 # IDE & OS files
 .vscode/

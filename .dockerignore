@@ -2,6 +2,7 @@
 .gitignore
 .env
 token.txt
+github_mgr.py
 .venv
 venv/
 __pycache__/
