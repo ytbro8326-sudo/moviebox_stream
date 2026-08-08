@@ -7,9 +7,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
 app = FastAPI(
-    title="MovieBox API Pro",
-    description="Full Pure REST API for moviebox.ph — Production Ready for Render",
-    version="2.2.1"
+    title="MovieBox Stream",
+    description="Full Streaming Web Application & Pure REST API for MovieBox",
+    version="3.0.0"
 )
 
 app.add_middleware(
@@ -102,191 +102,1058 @@ async def _make_request(url: str, method: str = "GET", payload: dict = None, cus
                     pass
 
             if resp.status_code != 200:
-                _bearer_token = None  # Reset token on failure for self-healing
+                _bearer_token = None
                 raise HTTPException(status_code=502, detail=f"Upstream API error: {resp.status_code}")
 
             return resp.json()
         except Exception as e:
-            _bearer_token = None  # Reset token on exception for self-healing
+            _bearer_token = None
             if isinstance(e, HTTPException): raise e
             raise HTTPException(status_code=502, detail=f"Request failed: {str(e)}")
 
 @app.get("/", response_class=HTMLResponse)
-async def dashboard():
-    html_content = """
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>MovieBox Pure API | Pro Dashboard</title>
-        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-        <style>
-            :root {
-                --primary: #ff3d71;
-                --secondary: #3366ff;
-                --accent: #00f2ff;
-                --bg: #07080c;
-                --card-bg: rgba(255, 255, 255, 0.03);
-                --glass: rgba(255, 255, 255, 0.06);
-                --text: #ffffff;
-            }
+async def home_web_app():
+    html_content = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MovieBox Stream — Watch Movies & TV Series Online</title>
+    <meta name="description" content="Discover, search, and stream your favorite movies, TV shows, and animations in HD. Zero ads, pure streaming experience.">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-body: #08090d;
+            --bg-card: rgba(22, 24, 34, 0.65);
+            --bg-glass: rgba(255, 255, 255, 0.05);
+            --bg-glass-hover: rgba(255, 255, 255, 0.12);
+            --primary: #ff3d71;
+            --primary-hover: #ff1a53;
+            --secondary: #3366ff;
+            --accent: #00f2ff;
+            --text-main: #f0f2f8;
+            --text-sub: #a0a5b5;
+            --border: rgba(255, 255, 255, 0.08);
+            --radius-lg: 24px;
+            --radius-md: 16px;
+            --radius-sm: 10px;
+            --shadow-glow: 0 12px 35px rgba(255, 61, 113, 0.35);
+        }
 
-            * { margin: 0; padding: 0; box-sizing: border-box; }
-            
-            body {
-                font-family: 'Outfit', sans-serif;
-                background: var(--bg);
-                color: var(--text);
-                overflow-x: hidden;
-                min-height: 100vh;
-                background-image: 
-                    radial-gradient(circle at 10% 10%, rgba(255, 61, 113, 0.12) 0%, transparent 40%),
-                    radial-gradient(circle at 90% 90%, rgba(51, 102, 255, 0.12) 0%, transparent 40%);
-            }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Outfit', sans-serif;
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 15% 10%, rgba(255, 61, 113, 0.12) 0%, transparent 40%),
+                radial-gradient(circle at 85% 60%, rgba(51, 102, 255, 0.12) 0%, transparent 40%);
+            background-attachment: fixed;
+        }
 
-            .container {
-                max-width: 1200px;
-                margin: 0 auto;
-                padding: 60px 24px;
-                position: relative;
-            }
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-body); }
+        ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.2); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary); }
 
-            header {
-                text-align: center;
-                margin-bottom: 80px;
-            }
+        /* Navbar */
+        nav {
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 18px 48px;
+            background: rgba(8, 9, 13, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            transition: all 0.3s ease;
+        }
 
-            h1 {
-                font-size: clamp(2.5rem, 8vw, 4rem);
-                font-weight: 800;
-                background: linear-gradient(135deg, #fff 0%, #aaa 100%);
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                margin-bottom: 15px;
-                letter-spacing: -2px;
-            }
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            text-decoration: none;
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: -0.5px;
+        }
 
-            .badge {
-                background: linear-gradient(90deg, var(--primary), var(--secondary));
-                padding: 8px 18px;
-                border-radius: 40px;
-                font-size: 0.85rem;
-                font-weight: 700;
-                display: inline-block;
-                margin-bottom: 25px;
-                text-transform: uppercase;
-                letter-spacing: 1px;
-                box-shadow: 0 10px 30px rgba(255, 61, 113, 0.3);
-            }
+        .logo-icon {
+            width: 42px; height: 42px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; color: #fff;
+            box-shadow: 0 4px 15px rgba(255, 61, 113, 0.4);
+        }
 
-            .grid {
-                display: grid;
-                grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-                gap: 30px;
-                margin-top: 20px;
-            }
+        .nav-links {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            list-style: none;
+        }
 
-            .card {
-                background: var(--card-bg);
-                border: 1px solid var(--glass);
-                border-radius: 28px;
-                padding: 35px;
-                backdrop-filter: blur(12px);
-                display: flex;
-                flex-direction: column;
-            }
+        .nav-btn {
+            padding: 10px 20px;
+            border-radius: 40px;
+            color: var(--text-sub);
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.95rem;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+        }
 
-            .card-title {
-                font-size: 1.5rem;
-                font-weight: 700;
-                margin-bottom: 18px;
-                display: flex;
-                align-items: center;
-                gap: 12px;
-            }
+        .nav-btn:hover, .nav-btn.active {
+            color: #fff;
+            background: var(--bg-glass-hover);
+        }
 
-            .card-desc {
-                color: #9ea3ac;
-                font-size: 1rem;
-                line-height: 1.6;
-                margin-bottom: 25px;
-                flex-grow: 1;
-            }
+        .nav-btn.active {
+            background: linear-gradient(135deg, rgba(255, 61, 113, 0.2), rgba(51, 102, 255, 0.2));
+            border: 1px solid rgba(255, 61, 113, 0.4);
+            color: #fff;
+        }
 
-            .endpoint {
-                font-family: 'JetBrains Mono', monospace;
-                background: rgba(0,0,0,0.4);
-                padding: 14px;
-                border-radius: 14px;
-                font-size: 0.85rem;
-                color: var(--accent);
-                border: 1px solid rgba(0,242,255,0.15);
-                margin-bottom: 25px;
-                word-break: break-all;
-            }
+        /* Search Box */
+        .search-container {
+            position: relative;
+            width: 320px;
+        }
 
-            .btn {
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                padding: 16px;
-                background: #ffffff;
-                color: #000000;
-                text-decoration: none;
-                border-radius: 16px;
-                font-weight: 700;
-                font-size: 0.95rem;
-                transition: all 0.3s;
-            }
+        .search-input {
+            width: 100%;
+            padding: 12px 20px 12px 46px;
+            border-radius: 30px;
+            background: rgba(255, 255, 255, 0.07);
+            border: 1px solid var(--border);
+            color: #fff;
+            font-family: inherit;
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.3s ease;
+        }
 
-            .btn:hover {
-                background: var(--primary);
-                color: #fff;
-            }
+        .search-input:focus {
+            background: rgba(255, 255, 255, 0.12);
+            border-color: var(--primary);
+            box-shadow: 0 0 20px rgba(255, 61, 113, 0.2);
+        }
 
-            footer { text-align: center; padding: 80px 0 40px; }
-            .dev-tag { font-weight: 800; color: #666; font-size: 0.75rem; border: 1px solid #222; padding: 12px 30px; border-radius: 50px; display: inline-block; }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <header>
-                <div class="badge">Enterprise API Solution v2.2.1</div>
-                <h1>MovieBox Pro</h1>
-                <p style="color: #667; font-size: 1.25rem; font-weight: 300;">Direct Stream Extraction API</p>
-            </header>
+        .search-icon {
+            position: absolute;
+            left: 16px; top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-sub);
+            font-size: 0.9rem;
+        }
 
-            <div class="grid">
-                <div class="card">
-                    <div class="card-title">🏠 Discover Home</div>
-                    <p class="card-desc">Headlines, recommended content, and trending blocks.</p>
-                    <div class="endpoint">/home</div>
-                    <a href="/home" target="_blank" class="btn">Launch API</a>
-                </div>
+        .suggestions-menu {
+            position: absolute;
+            top: calc(100% + 10px);
+            left: 0; right: 0;
+            background: rgba(18, 20, 29, 0.95);
+            backdrop-filter: blur(24px);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            max-height: 380px;
+            overflow-y: auto;
+            z-index: 200;
+            display: none;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+        }
 
-                <div class="card">
-                    <div class="card-title">🔍 Smart Search</div>
-                    <p class="card-desc">High-precision search engine results.</p>
-                    <div class="endpoint">/search?q=Attack on Titan</div>
-                    <a href="/search?q=Attack on Titan" target="_blank" class="btn">Test Search</a>
-                </div>
+        .suggestion-item {
+            padding: 12px 18px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            cursor: pointer;
+            transition: background 0.2s;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+        }
 
-                <div class="card">
-                    <div class="card-title">🎬 Direct Stream Engine</div>
-                    <p class="card-desc">Working direct MP4 CDN links from aoneroom.com (Supports 360p - 1080p).</p>
-                    <div class="endpoint">/api/stream/{subject_id}?se=0&ep=0</div>
-                    <a href="/api/stream/56988683026712168?detail_path=attack-on-titan-hindi-kGWQOIx0d4&se=0&ep=0" target="_blank" class="btn">Get Direct MP4 Links</a>
+        .suggestion-item:hover {
+            background: rgba(255, 61, 113, 0.15);
+        }
+
+        .suggestion-item i { color: var(--primary); font-size: 0.9rem; }
+        .suggestion-title { font-weight: 500; font-size: 0.9rem; }
+
+        /* Main Layout */
+        main {
+            padding-top: 90px;
+            max-width: 1440px;
+            margin: 0 auto;
+            padding-bottom: 80px;
+        }
+
+        /* Hero Banner */
+        .hero {
+            position: relative;
+            margin: 24px 48px 48px;
+            height: 480px;
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            display: flex;
+            align-items: flex-end;
+            padding: 48px;
+            background-size: cover;
+            background-position: center;
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+            transition: background-image 0.5s ease-in-out;
+        }
+
+        .hero-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(0deg, #08090d 5%, rgba(8, 9, 13, 0.6) 50%, rgba(8, 9, 13, 0.1) 100%);
+        }
+
+        .hero-content {
+            position: relative;
+            z-index: 2;
+            max-width: 650px;
+        }
+
+        .hero-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            border-radius: 30px;
+            background: rgba(255, 61, 113, 0.2);
+            border: 1px solid rgba(255, 61, 113, 0.4);
+            color: var(--primary);
+            font-size: 0.8rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 16px;
+        }
+
+        .hero-title {
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            font-weight: 900;
+            line-height: 1.1;
+            margin-bottom: 16px;
+            text-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .hero-desc {
+            color: var(--text-sub);
+            font-size: 1rem;
+            line-height: 1.6;
+            margin-bottom: 28px;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .hero-btns {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .btn-primary {
+            padding: 14px 32px;
+            border-radius: 40px;
+            background: linear-gradient(135deg, var(--primary), var(--primary-hover));
+            color: #fff;
+            font-weight: 700;
+            font-size: 1rem;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: var(--shadow-glow);
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-3px) scale(1.03);
+            box-shadow: 0 16px 40px rgba(255, 61, 113, 0.5);
+        }
+
+        .btn-secondary {
+            padding: 14px 28px;
+            border-radius: 40px;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            color: #fff;
+            font-weight: 600;
+            font-size: 1rem;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        /* Content Section */
+        .section {
+            padding: 0 48px;
+            margin-bottom: 56px;
+        }
+
+        .section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            font-size: 1.6rem;
+            font-weight: 800;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .section-title i {
+            color: var(--primary);
+        }
+
+        /* Movie Grid */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 24px;
+        }
+
+        .card {
+            position: relative;
+            border-radius: var(--radius-md);
+            overflow: hidden;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card:hover {
+            transform: translateY(-10px) scale(1.03);
+            border-color: rgba(255, 61, 113, 0.5);
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 61, 113, 0.2);
+        }
+
+        .card-poster {
+            position: relative;
+            width: 100%;
+            padding-top: 150%;
+            background-size: cover;
+            background-position: center;
+            background-color: #12141d;
+        }
+
+        .card-overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(0deg, rgba(8, 9, 13, 0.95) 0%, transparent 60%);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .card:hover .card-overlay {
+            opacity: 1;
+        }
+
+        .play-icon {
+            width: 54px; height: 54px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: #fff;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem;
+            box-shadow: var(--shadow-glow);
+            transform: scale(0.8);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover .play-icon {
+            transform: scale(1);
+        }
+
+        .card-badge {
+            position: absolute;
+            top: 12px; left: 12px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            background: rgba(8, 9, 13, 0.8);
+            backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--accent);
+            font-size: 0.75rem;
+            font-weight: 700;
+            z-index: 2;
+        }
+
+        .card-rating {
+            position: absolute;
+            top: 12px; right: 12px;
+            padding: 4px 8px;
+            border-radius: 8px;
+            background: rgba(255, 193, 7, 0.2);
+            border: 1px solid rgba(255, 193, 7, 0.4);
+            color: #ffc107;
+            font-size: 0.75rem;
+            font-weight: 700;
+            display: flex; align-items: center; gap: 4px;
+            z-index: 2;
+        }
+
+        .card-info {
+            padding: 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .card-name {
+            font-weight: 700;
+            font-size: 0.95rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .card-sub {
+            color: var(--text-sub);
+            font-size: 0.8rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* Spinner & Loading */
+        .loading-spinner {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 60px 0;
+            gap: 16px;
+            color: var(--text-sub);
+        }
+
+        .spinner {
+            width: 48px; height: 48px;
+            border: 4px solid rgba(255, 61, 113, 0.2);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s infinite linear;
+        }
+
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* Modal Base */
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            z-index: 1000;
+            background: rgba(4, 5, 8, 0.88);
+            backdrop-filter: blur(25px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 24px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .modal-content {
+            position: relative;
+            background: rgba(18, 20, 29, 0.95);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            max-width: 900px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.8);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 20px; right: 20px;
+            z-index: 10;
+            width: 40px; height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid var(--border);
+            color: #fff;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: var(--primary);
+            transform: rotate(90deg);
+        }
+
+        /* Detail Modal Specs */
+        .detail-hero {
+            display: flex;
+            gap: 32px;
+            padding: 40px;
+        }
+
+        .detail-poster {
+            width: 220px;
+            flex-shrink: 0;
+            height: 330px;
+            border-radius: var(--radius-md);
+            background-size: cover;
+            background-position: center;
+            border: 1px solid var(--border);
+            box-shadow: 0 16px 40px rgba(0,0,0,0.5);
+        }
+
+        .detail-body {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            flex-grow: 1;
+        }
+
+        .detail-title {
+            font-size: 2.2rem;
+            font-weight: 800;
+            line-height: 1.2;
+        }
+
+        .detail-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex-wrap: wrap;
+            font-size: 0.9rem;
+            color: var(--text-sub);
+        }
+
+        .detail-meta-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            background: rgba(0, 242, 255, 0.15);
+            color: var(--accent);
+            font-weight: 700;
+        }
+
+        .detail-overview {
+            color: #c5cad8;
+            font-size: 0.95rem;
+            line-height: 1.7;
+        }
+
+        .episodes-selector {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-top: 12px;
+        }
+
+        .select-input {
+            padding: 10px 18px;
+            border-radius: 12px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--border);
+            color: #fff;
+            font-family: inherit;
+            font-size: 0.9rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        /* Player Modal */
+        .player-wrapper {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%; /* 16:9 ratio */
+            background: #000;
+            border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+            overflow: hidden;
+        }
+
+        .player-video {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .player-controls-bar {
+            padding: 20px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: #12141d;
+            border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+        }
+
+        .quality-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .quality-btn {
+            padding: 6px 14px;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid var(--border);
+            color: var(--text-sub);
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .quality-btn.active, .quality-btn:hover {
+            background: var(--primary);
+            color: #fff;
+            border-color: var(--primary);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 900px) {
+            nav { padding: 16px 24px; }
+            .search-container { width: 220px; }
+            .hero { margin: 16px 24px 32px; padding: 28px; height: 380px; }
+            .section { padding: 0 24px; }
+            .detail-hero { flex-direction: column; padding: 24px; }
+            .detail-poster { width: 100%; height: 280px; }
+        }
+
+        @media (max-width: 600px) {
+            .nav-links { display: none; }
+            .hero-title { font-size: 1.8rem; }
+            .grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 14px; }
+            .card-info { padding: 10px; }
+            .card-name { font-size: 0.85rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Navigation Bar -->
+    <nav>
+        <a href="#" class="logo" onclick="loadPage('home'); return false;">
+            <div class="logo-icon"><i class="fa-solid fa-play"></i></div>
+            MovieBox<span style="color: var(--primary)">.ph</span>
+        </a>
+
+        <ul class="nav-links">
+            <li><button class="nav-btn active" id="btn-home" onclick="loadPage('home')">Home</button></li>
+            <li><button class="nav-btn" id="btn-movies" onclick="loadCategory('movies')">Movies</button></li>
+            <li><button class="nav-btn" id="btn-tv" onclick="loadCategory('tv-series')">TV Series</button></li>
+            <li><button class="nav-btn" id="btn-anime" onclick="loadCategory('animation')">Animation</button></li>
+        </ul>
+
+        <div class="search-container">
+            <i class="fa-solid fa-magnifying-glass search-icon"></i>
+            <input type="text" class="search-input" id="search-input" placeholder="Search movies, anime, TV..." onkeyup="handleSearchInput(event)">
+            <div class="suggestions-menu" id="suggestions-menu"></div>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main id="main-content">
+        <!-- Dynamic Content Injected Here -->
+        <div class="loading-spinner">
+            <div class="spinner"></div>
+            <p>Initializing MovieBox API...</p>
+        </div>
+    </main>
+
+    <!-- Detail Modal -->
+    <div class="modal-backdrop" id="detail-modal">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeModal('detail-modal')"><i class="fa-solid fa-xmark"></i></button>
+            <div class="detail-hero">
+                <div class="detail-poster" id="modal-poster"></div>
+                <div class="detail-body">
+                    <div class="detail-title" id="modal-title">Title</div>
+                    <div class="detail-meta">
+                        <span class="detail-meta-badge" id="modal-rating"><i class="fa-solid fa-star"></i> 8.5</span>
+                        <span id="modal-year">2024</span>
+                        <span id="modal-badge">HD</span>
+                    </div>
+                    <p class="detail-overview" id="modal-desc">Loading details...</p>
+                    
+                    <div class="episodes-selector" id="tv-controls" style="display: none;">
+                        <select class="select-input" id="season-select">
+                            <option value="1">Season 1</option>
+                        </select>
+                        <select class="select-input" id="episode-select">
+                            <option value="1">Episode 1</option>
+                        </select>
+                    </div>
+
+                    <div style="margin-top: 16px;">
+                        <button class="btn-primary" id="modal-play-btn"><i class="fa-solid fa-play"></i> Watch Stream Now</button>
+                    </div>
                 </div>
             </div>
-
-            <footer>
-                <div class="dev-tag">Developer: Walter</div>
-            </footer>
         </div>
-    </body>
-    </html>
-    """
+    </div>
+
+    <!-- Video Player Modal -->
+    <div class="modal-backdrop" id="player-modal">
+        <div class="modal-content" style="max-width: 1000px; padding: 0; background: #000;">
+            <button class="modal-close" onclick="closePlayerModal()"><i class="fa-solid fa-xmark"></i></button>
+            <div class="player-wrapper">
+                <video id="html5-player" class="player-video" controls autoplay crossorigin="anonymous"></video>
+            </div>
+            <div class="player-controls-bar">
+                <div>
+                    <h3 id="player-title" style="font-size: 1.1rem; font-weight: 700;">Movie Title</h3>
+                    <p id="player-sub" style="font-size: 0.85rem; color: var(--text-sub);">Quality Stream</p>
+                </div>
+                <div class="quality-selector" id="quality-buttons">
+                    <!-- Dynamic Quality Buttons -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentSubjectId = null;
+        let currentSlug = "";
+        let currentStreams = [];
+
+        // App Init
+        document.addEventListener("DOMContentLoaded", () => {
+            loadPage('home');
+        });
+
+        // Load Homepage
+        async function loadPage(pageType) {
+            setActiveNav('btn-' + (pageType === 'home' ? 'home' : pageType));
+            const main = document.getElementById('main-content');
+            main.innerHTML = `
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                    <p>Fetching latest catalog...</p>
+                </div>`;
+
+            try {
+                const res = await fetch('/home');
+                const data = await res.json();
+                
+                if (!data.sections || data.sections.length === 0) {
+                    main.innerHTML = `<p style="text-align:center; padding: 60px;">No content found.</p>`;
+                    return;
+                }
+
+                let html = '';
+                
+                // Hero Banner (First Banner Item)
+                const bannerSec = data.sections.find(s => s.section === 'Banner');
+                if (bannerSec && bannerSec.items.length > 0) {
+                    const heroItem = bannerSec.items[0];
+                    html += `
+                    <div class="hero" style="background-image: url('${heroItem.poster_url || ''}')">
+                        <div class="hero-overlay"></div>
+                        <div class="hero-content">
+                            <div class="hero-tag"><i class="fa-solid fa-fire"></i> Featured Hit</div>
+                            <h1 class="hero-title">${heroItem.name}</h1>
+                            <p class="hero-desc">Discover the top trending title on MovieBox. Direct high-speed MP4 streaming enabled.</p>
+                            <div class="hero-btns">
+                                <button class="btn-primary" onclick="openMediaDetail('${heroItem.subject_id}', '${heroItem.slug}')"><i class="fa-solid fa-play"></i> Watch Now</button>
+                            </div>
+                        </div>
+                    </div>`;
+                }
+
+                // Render Content Sections
+                data.sections.forEach(sec => {
+                    if (sec.items && sec.items.length > 0) {
+                        html += `
+                        <div class="section">
+                            <div class="section-header">
+                                <h2 class="section-title"><i class="fa-solid fa-clapperboard"></i> ${sec.section}</h2>
+                            </div>
+                            <div class="grid">
+                                ${sec.items.map(item => renderCard(item)).join('')}
+                            </div>
+                        </div>`;
+                    }
+                });
+
+                main.innerHTML = html;
+            } catch (err) {
+                main.innerHTML = `<div class="loading-spinner"><p style="color:var(--primary)">Failed to load content: ${err.message}</p></div>`;
+            }
+        }
+
+        // Load Categories (Movies, TV, Anime)
+        async function loadCategory(catEndpoint) {
+            setActiveNav('btn-' + catEndpoint);
+            const main = document.getElementById('main-content');
+            main.innerHTML = `
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                    <p>Loading category...</p>
+                </div>`;
+
+            try {
+                const res = await fetch(`/${catEndpoint}?page=1`);
+                const data = await res.json();
+                
+                const titleMap = {
+                    'movies': 'Movies Catalog',
+                    'tv-series': 'TV Series Catalog',
+                    'animation': 'Anime & Animation'
+                };
+
+                let html = `
+                <div class="section" style="margin-top: 24px;">
+                    <div class="section-header">
+                        <h2 class="section-title"><i class="fa-solid fa-film"></i> ${titleMap[catEndpoint] || 'Catalog'}</h2>
+                    </div>
+                    <div class="grid">
+                        ${(data.items || []).map(item => renderCard(item)).join('')}
+                    </div>
+                </div>`;
+
+                main.innerHTML = html;
+            } catch (err) {
+                main.innerHTML = `<div class="loading-spinner"><p style="color:var(--primary)">Error: ${err.message}</p></div>`;
+            }
+        }
+
+        // Render Card Component
+        function renderCard(item) {
+            const poster = item.poster_url || 'https://via.placeholder.com/300x450?text=No+Poster';
+            const rating = item.rating ? `<div class="card-rating"><i class="fa-solid fa-star"></i> ${item.rating}</div>` : '';
+            const badge = item.badge ? `<div class="card-badge">${item.badge}</div>` : '';
+
+            return `
+            <div class="card" onclick="openMediaDetail('${item.subject_id}', '${item.slug}')">
+                ${badge}
+                ${rating}
+                <div class="card-poster" style="background-image: url('${poster}')">
+                    <div class="card-overlay">
+                        <div class="play-icon"><i class="fa-solid fa-play"></i></div>
+                    </div>
+                </div>
+                <div class="card-info">
+                    <div class="card-name">${item.name}</div>
+                    <div class="card-sub">
+                        <span>${item.year || 'HD'}</span>
+                        <span style="color: var(--primary); font-weight: 700;">Stream</span>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        // Live Search Handling
+        let searchTimeout = null;
+        function handleSearchInput(e) {
+            const query = e.target.value.trim();
+            const menu = document.getElementById('suggestions-menu');
+
+            if (e.key === 'Enter' && query.length > 0) {
+                menu.style.display = 'none';
+                executeSearch(query);
+                return;
+            }
+
+            if (query.length < 2) {
+                menu.style.display = 'none';
+                return;
+            }
+
+            clearTimeout(searchTimeout);
+            searchTimeout = setTimeout(async () => {
+                try {
+                    const res = await fetch(`/search/suggest?q=${encodeURIComponent(query)}`);
+                    const data = await res.json();
+                    
+                    if (data.suggestions && data.suggestions.length > 0) {
+                        menu.innerHTML = data.suggestions.map(s => `
+                            <div class="suggestion-item" onclick="openMediaDetail('${s.subject_id}', '${s.slug}'); document.getElementById('suggestions-menu').style.display='none';">
+                                <i class="fa-solid fa-magnifying-glass"></i>
+                                <span class="suggestion-title">${s.title}</span>
+                            </div>
+                        `).join('');
+                        menu.style.display = 'block';
+                    } else {
+                        menu.style.display = 'none';
+                    }
+                } catch(err) {}
+            }, 300);
+        }
+
+        // Search Full Grid
+        async function executeSearch(query) {
+            const main = document.getElementById('main-content');
+            main.innerHTML = `
+                <div class="loading-spinner">
+                    <div class="spinner"></div>
+                    <p>Searching for "${query}"...</p>
+                </div>`;
+
+            try {
+                const res = await fetch(`/search?q=${encodeURIComponent(query)}`);
+                const data = await res.json();
+                
+                let html = `
+                <div class="section" style="margin-top: 24px;">
+                    <div class="section-header">
+                        <h2 class="section-title"><i class="fa-solid fa-magnifying-glass"></i> Search Results for "${query}"</h2>
+                    </div>
+                    <div class="grid">
+                        ${(data.items || []).map(item => renderCard(item)).join('')}
+                    </div>
+                </div>`;
+
+                main.innerHTML = html;
+            } catch (err) {
+                main.innerHTML = `<div class="loading-spinner"><p style="color:var(--primary)">Search error: ${err.message}</p></div>`;
+            }
+        }
+
+        // Open Detail Modal
+        async function openMediaDetail(subjectId, slug) {
+            currentSubjectId = subjectId;
+            currentSlug = slug;
+
+            const modal = document.getElementById('detail-modal');
+            modal.style.display = 'flex';
+
+            document.getElementById('modal-title').innerText = 'Loading Title...';
+            document.getElementById('modal-desc').innerText = 'Fetching specs...';
+            document.getElementById('modal-poster').style.backgroundImage = 'none';
+
+            try {
+                const res = await fetch(`/detail/${slug}`);
+                const data = await res.json();
+                const detail = data.data || {};
+                const sub = detail.subject || {};
+
+                document.getElementById('modal-title').innerText = sub.title || 'Movie / Series';
+                document.getElementById('modal-desc').innerText = sub.description || sub.introduction || 'No synopsis available.';
+                document.getElementById('modal-poster').style.backgroundImage = `url('${sub.cover?.url || ''}')`;
+                document.getElementById('modal-rating').innerHTML = `<i class="fa-solid fa-star"></i> ${sub.imdbRatingValue || '8.0'}`;
+                document.getElementById('modal-year').innerText = (sub.releaseDate || '').substring(0, 4) || '2024';
+                document.getElementById('modal-badge').innerText = sub.corner || 'HD';
+
+                // Play Button Handler
+                document.getElementById('modal-play-btn').onclick = () => {
+                    closeModal('detail-modal');
+                    launchPlayer(subjectId, slug, 0, 0, sub.title);
+                };
+
+            } catch (err) {
+                document.getElementById('modal-title').innerText = 'Details Loaded';
+                document.getElementById('modal-play-btn').onclick = () => {
+                    closeModal('detail-modal');
+                    launchPlayer(subjectId, slug, 0, 0, 'Stream Video');
+                };
+            }
+        }
+
+        // Launch Video Player
+        async function launchPlayer(subjectId, slug, se=0, ep=0, title='Stream') {
+            const playerModal = document.getElementById('player-modal');
+            const video = document.getElementById('html5-player');
+            const playerTitle = document.getElementById('player-title');
+            const qualityBox = document.getElementById('quality-buttons');
+
+            playerTitle.innerText = title;
+            qualityBox.innerHTML = '<span>Fetching sources...</span>';
+            video.src = '';
+            playerModal.style.display = 'flex';
+
+            try {
+                const res = await fetch(`/api/stream/${subjectId}?detail_path=${slug}&se=${se}&ep=${ep}`);
+                const data = await res.json();
+
+                if (data.sources && data.sources.length > 0) {
+                    currentStreams = data.sources;
+                    
+                    // Render Quality Buttons
+                    qualityBox.innerHTML = data.sources.map((s, idx) => `
+                        <button class="quality-btn ${idx === 0 ? 'active' : ''}" onclick="switchQuality(${idx})">${s.resolution} (${s.format})</button>
+                    `).join('');
+
+                    // Play Highest Quality Source
+                    switchQuality(0);
+                } else {
+                    qualityBox.innerHTML = '<span style="color: var(--primary)">No direct MP4 stream found for this episode.</span>';
+                }
+            } catch (err) {
+                qualityBox.innerHTML = `<span style="color: var(--primary)">Stream error: ${err.message}</span>`;
+            }
+        }
+
+        // Switch Resolution Quality
+        function switchQuality(idx) {
+            if (!currentStreams[idx]) return;
+            const video = document.getElementById('html5-player');
+            const selected = currentStreams[idx];
+
+            document.querySelectorAll('.quality-btn').forEach((btn, i) => {
+                btn.classList.toggle('active', i === idx);
+            });
+
+            video.src = selected.url;
+            video.play();
+        }
+
+        // Close Modal Helper
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        function closePlayerModal() {
+            const video = document.getElementById('html5-player');
+            video.pause();
+            video.src = '';
+            closeModal('player-modal');
+        }
+
+        // Nav Helper
+        function setActiveNav(btnId) {
+            document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+            const el = document.getElementById(btnId);
+            if (el) el.classList.add('active');
+        }
+    </script>
+</body>
+</html>"""
     return HTMLResponse(content=html_content)
 
 @app.get("/home")
@@ -467,7 +1334,7 @@ async def get_captions(subject_id: str, detail_path: str = "", se: int = 0, ep: 
 
 @app.get("/health")
 async def health_check():
-    return {"status": "ok", "service": "MovieBox API Pro", "version": "2.2.1"}
+    return {"status": "ok", "service": "MovieBox API Pro", "version": "3.0.0"}
 
 if __name__ == "__main__":
     import os, uvicorn
